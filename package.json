@@ -1,0 +1,9 @@
+{
+ "name": "touhouvs-test",
+ "version": "0.0.1",
+ "description": "A quick text demo for Touhou VS.",
+ "dependencies": {
+  "express": "^4.16.4",
+  "socket.io": "^2.2.0"
+ }
+}
