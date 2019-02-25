@@ -12,51 +12,39 @@ let players = {}
 io.on('connection', socket => {
   let roomid
   for (roomid = 1; ; roomid++) {
-    let joined = false
-    io.of('Room #' + roomid).clients((error, clients) => {
-      if (error) {
-        throw error
-      }
-      if (clients.length < 2) {
-        console.log(clients)
-        socket.join('Room #' + roomid)
-        joined = true
-        return
-      }
-    })
-    if (joined) {
+    let room = io.of('Room #' + roomid)
+    if (Object.keys(room.connected).length < 2) {
+      socket.join('Room #' + roomid)
       break
     }
   }
   console.log(`Client user ${socket.id} has joined in Room #${roomid}!`)
   socket.on('disconnect', () => {
-    let room = Object.keys(socket.rooms)[1]
+    let rooms = Object.keys(socket.rooms)
+    let room = rooms[rooms.length - 1]
     socket.leave(room)
     console.log(`Client user ${socket.id} disconnected from ${room}...`)
   })
   socket.on('select char', char => {
     players[socket.id] = new chars[char]()
-    let room = Object.keys(socket.rooms)[1]
-    io.of(room).clients((error, clients) => {
-      if (error) {
-        throw error
+    let rooms = Object.keys(socket.rooms)
+    let room = rooms[rooms.length - 1]
+    let clients = Object.keys(io.of(room).connected)
+    let oppo = undefined
+    for (let clientid of clients) {
+      if (clientid !== socket.id) {
+        oppo = players[clientid].constructor.name
       }
-      let oppo = undefined
+    }
+    if (oppo !== undefined) {
       for (let clientid of clients) {
-        if (clientid !== socket.id) {
-          oppo = players[clientid].constructor.name
+        if (clientid === socket.id) {
+          socket.send('char selected', char, oppo)
+        } else {
+          io.to(clientid).emit('char selected', oppo, char)
         }
       }
-      if (oppo !== undefined) {
-        for (let clientid of clients) {
-          if (clientid === socket.id) {
-            socket.send('char selected', char, oppo)
-          } else {
-            io.to(clientid).emit('char selected', oppo, char)
-          }
-        }
-      }
-    })
+    }
   })
 })
 
