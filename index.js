@@ -3,6 +3,7 @@ var http = require('http').Server(app)
 const io = require('socket.io')(http)
 
 const chars = require('./src/char.js')
+const card = require('./src/card.js')
 
 http.listen(9001)
 console.log('Listening on port 9001...')
@@ -12,44 +13,106 @@ let players = {}
 io.on('connection', socket => {
   let roomid
   for (roomid = 1; ; roomid++) {
-    let room = io.of('Room #' + roomid)
-    if (Object.keys(room.connected).length < 2) {
+    let room = io.sockets.adapter.rooms['Room #' + roomid]
+    if (!room || room.length < 2) {
       socket.join('Room #' + roomid)
       break
     }
   }
   console.log(`Client user ${socket.id} has joined in Room #${roomid}!`)
-  socket.on('disconnect', () => {
+
+  // disconnecting
+  socket.on('disconnecting', reason => {
     let rooms = Object.keys(socket.rooms)
-    let room = rooms[rooms.length - 1]
-    socket.leave(room)
+    let room
+    for (let r of rooms) {
+      if (r !== socket.id) {
+        room = r
+        break
+      }
+    }
     console.log(`Client user ${socket.id} disconnected from ${room}...`)
   })
+
+  // user has selected a char
   socket.on('select char', char => {
     players[socket.id] = new chars[char]()
     let rooms = Object.keys(socket.rooms)
-    let room = rooms[rooms.length - 1]
-    let clients = Object.keys(io.of(room).connected)
+    let room
+    for (let r of rooms) {
+      if (r !== socket.id) {
+        room = r
+        break
+      }
+    }
+    let clients = Object.keys(io.sockets.adapter.rooms[room].sockets)
     let oppo = undefined
     for (let clientid of clients) {
       if (clientid !== socket.id) {
-        oppo = players[clientid].constructor.name
+        oppo = players[clientid]
+        break
       }
     }
     if (oppo !== undefined) {
+      plyr = players[socket.id]
+      for (let i = 0; i < 7; i++) {
+        plyr.handcards.push(new card.Card())
+        oppo.handcards.push(new card.Card())
+      }
+      attrs = ['name', 'hp', 'basehp', 'sc', 'handcards', 'uselimit']
+      let p1 = {}, p2 = {}
+      for (let attr of attrs) {
+        p1[attr] = plyr[attr]
+        p2[attr] = oppo[attr]
+      }
       for (let clientid of clients) {
         if (clientid === socket.id) {
-          socket.send('char selected', char, oppo)
+          socket.emit('char selected', p1, p2)
         } else {
-          io.to(clientid).emit('char selected', oppo, char)
+          io.to(clientid).emit('char selected', p2, p1)
         }
+      }
+    }
+  })
+
+  // user has chosen its action
+  socket.on('use', acts => {
+    plyr = players[socket.id]
+    plyr.use = acts
+    let rooms = Object.keys(socket.rooms)
+    let room
+    for (let r of rooms) {
+      if (r !== socket.id) {
+        room = r
+        break
+      }
+    }
+    let clients = Object.keys(io.sockets.adapter.rooms[room].sockets)
+    let oppo = undefined
+    for (let clientid of clients) {
+      if (clientid !== socket.id) {
+        oppo = players[clientid]
+        break
+      }
+    }
+    if (oppo !== undefined && oppo.use.length > 0) {
+      let result = {}
+      for (let i = 0; plyr.use[i] !== undefined || oppo.use[i] !== undefined; i++) {
+        /*if (plyr.use[i] === undefined) {
+          attacker = oppo
+          defender = plyr
+        } else if (oppo.use[i] === undefined) {
+          attacker = plyr
+          defender = oppo
+        } else if (plyr.handcards[plyr.use[i]].atk > oppo.handcards[oppo.use[i]].atk) {
+          attacker = plyr
+          defender = oppo
+        } else if (oppo.handcards[oppo.use[i]].atk > plyr.handcards[plyr.use[i]].atk) {
+          attacker = oppo
+          defender = plyr
+        }*/
       }
     }
   })
 })
 
-io.on('connection', socket => {
-  socket.on('foo', () => {
-    //io.sendTo(socket, msg)
-  })
-})
