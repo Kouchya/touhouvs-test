@@ -19,6 +19,14 @@ class Card {
     this.atk = Math.floor(Math.random() * 10 + 1)
     this.dfs = Math.floor(Math.random() * 10 + 1)
   }
+
+  isDefense() {
+    return ['catch', 'harden', 'lure'].includes(this.name)
+  }
+
+  isClose() {
+    return ['punch', 'kick', 'tackle']
+  }
 }
 
 module.exports = {

@@ -98,19 +98,65 @@ io.on('connection', socket => {
     if (oppo !== undefined && oppo.use.length > 0) {
       let result = {}
       for (let i = 0; plyr.use[i] !== undefined || oppo.use[i] !== undefined; i++) {
-        /*if (plyr.use[i] === undefined) {
-          attacker = oppo
-          defender = plyr
-        } else if (oppo.use[i] === undefined) {
+        let plyrcard, oppocard
+        if (plyr.use[i] !== undefined) {
+          plyrcard = plyr.card = plyr.handcards[plyr.use[i]]
+        }
+        if (oppo.use[i] !== undefined) {
+          oppocard = oppo.card = oppo.handcards[oppo.use[i]]
+        }
+
+        let attacker, defender
+        let mode = 'tied'
+        if (plyrcard === undefined) {
+          if (!oppocard.isDefense()) {
+            mode = 'normal'
+            attacker = oppo
+            defender = plyr
+          }
+        } else if (oppocard === undefined) {
+          if (!plyrcard.isDefense()) {
+            mode = 'normal'
+            attacker = plyr
+            defender = oppo
+          }
+        } else if (plyrcard.isDefense()) {
+          if (!oppocard.isDefense()) {
+            mode = 'defending'
+            attacker = oppo
+            defender = plyr
+          }
+        } else if (oppocard.isDefense()) {
+          if (!plyrcard.isDefense()) {
+            mode = 'defending'
+            attacker = plyr
+            defender = oppo
+          }
+        } else if (plyrcard.atk > oppocard.atk) {
+          mode = 'normal'
           attacker = plyr
           defender = oppo
-        } else if (plyr.handcards[plyr.use[i]].atk > oppo.handcards[oppo.use[i]].atk) {
-          attacker = plyr
-          defender = oppo
-        } else if (oppo.handcards[oppo.use[i]].atk > plyr.handcards[plyr.use[i]].atk) {
+        } else if (plyrcard.atk < oppocard.atk) {
+          mode = 'normal'
           attacker = oppo
           defender = plyr
-        }*/
+        }
+
+        if (mode === 'defending') {
+          if (defender.card.name === 'catch' && !attacker.card.isClose()) {
+            mode = 'normal'
+          } else if (defender.card.name === 'lure' && attacker.card.isClose()) {
+            mode = 'normal'
+          }
+        }
+
+        if (mode === 'tied') {
+          // nobody moves
+        } else if (mode === 'normal') {
+          // PK! but note the undefined cases
+        } else if (mode === 'defending') {
+          // deal with nasty defend cards
+        }
       }
     }
   })

@@ -6,6 +6,7 @@ class Char {
     this.handcards = []
     this.uselimit = 3
     this.use = []
+    this.card = undefined
   }
 }
 
