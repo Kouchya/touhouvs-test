@@ -38,6 +38,10 @@ const CardInfo = {
   lure: {
     dmg: 0,
     type: 'defend'
+  },
+  dream: {
+    dmg: 0,
+    type: 'special'
   }
 }
 
