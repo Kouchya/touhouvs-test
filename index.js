@@ -96,7 +96,7 @@ io.on('connection', socket => {
       }
     }
     if (oppo !== undefined && oppo.use.length > 0) {
-      let result = {}
+      let result = {} // any msg to be sent to cli will first be stored here
       for (let i = 0; plyr.use[i] !== undefined || oppo.use[i] !== undefined; i++) {
         let plyrcard, oppocard
         if (plyr.use[i] !== undefined) {
@@ -107,55 +107,81 @@ io.on('connection', socket => {
         }
 
         let attacker, defender
-        let mode = 'tied'
+        let mode = 'normal' // if not normal, then nobody moves
         if (plyrcard === undefined) {
-          if (!oppocard.isDefense()) {
-            mode = 'normal'
+          if (oppocard.getType() !== 'defend') {
             attacker = oppo
             defender = plyr
           }
         } else if (oppocard === undefined) {
-          if (!plyrcard.isDefense()) {
-            mode = 'normal'
+          if (plyrcard.getType() !== 'defend') {
             attacker = plyr
             defender = oppo
           }
-        } else if (plyrcard.isDefense()) {
-          if (!oppocard.isDefense()) {
-            mode = 'defending'
+        } else if (plyrcard.getType() === 'defend') {
+          if (oppocard.getType() !== 'defend') {
             attacker = oppo
             defender = plyr
           }
-        } else if (oppocard.isDefense()) {
-          if (!plyrcard.isDefense()) {
-            mode = 'defending'
+        } else if (oppocard.getType() === 'defend') {
+          if (plyrcard.getType() !== 'defend') {
             attacker = plyr
             defender = oppo
           }
         } else if (plyrcard.atk > oppocard.atk) {
-          mode = 'normal'
           attacker = plyr
           defender = oppo
         } else if (plyrcard.atk < oppocard.atk) {
-          mode = 'normal'
           attacker = oppo
           defender = plyr
-        }
-
-        if (mode === 'defending') {
-          if (defender.card.name === 'catch' && !attacker.card.isClose()) {
-            mode = 'normal'
-          } else if (defender.card.name === 'lure' && attacker.card.isClose()) {
-            mode = 'normal'
-          }
+        } else {
+          mode = 'tied'
         }
 
         if (mode === 'tied') {
           // nobody moves
         } else if (mode === 'normal') {
-          // PK! but note the undefined cases
-        } else if (mode === 'defending') {
-          // deal with nasty defend cards
+          // Fight!
+          let factor = 1
+          if (defender.card !== undefined) {
+            if (attacker.card.atk / defender.card.dfs >= 2) {
+              factor = 2 // critical hit
+            } else if (attacker.card.atk / defender.card.dfs <= 0.5) {
+              factor = 0.5 // anti-critical
+            } else {
+              factor += (attacker.card.atk - defender.card.dfs) / 10
+            }
+          }
+
+          let dmg = Math.floor(attacker.card.getBaseDamage() * factor)
+
+          if (defender.card !== undefined && ['close', 'remote'].includes(attacker.card.getType())) {
+            if (defender.card.name === 'catch' && attacker.card.getType() === 'close') {
+              dmg = 0
+              attacker.sufferDamage(70)
+              continue
+            } else if (defender.card.name === 'harden') {
+              if (defender.card.dfs < attacker.card.atk) {
+                dmg /= 2
+              } else if (defender.card.dfs >= attacker.card.atk) {
+                dmg = 0
+              }
+            } else if (defender.card.name === 'lure' && attacker.card.getType() === 'remote') {
+              dmg = 0
+              attacker.sufferDamage(attacker.card.getBaseDamage())
+              attacker.card.doEffect(defender, attacker)
+              continue
+            }
+          }
+
+          if (dmg > 0) {
+            defender.sufferDamage(dmg)
+          }
+
+          attacker.card.doEffect(attacker, defender)
+          if (defender.card !== undefined && defender.card.name === 'lvlup') {
+            defender.card.doEffect(defender, attacker)
+          }
         }
       }
     }

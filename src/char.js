@@ -8,6 +8,13 @@ class Char {
     this.use = []
     this.card = undefined
   }
+
+  sufferDamage(dmg) {
+    this.hp -= dmg
+    if (this.hp < 0) {
+      this.hp = 0
+    }
+  }
 }
 
 class Reimu extends Char {
