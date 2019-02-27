@@ -144,7 +144,7 @@ io.on('connection', socket => {
           // Fight!
           let factor = 1
           if (defender.card !== undefined) {
-            if (attacker.card.atk / defender.card.dfs >= 2) {
+            if (attacker.card.atk / defender.card.dfs >= 2 || (attacker.card.name === 'break' && defender.card !== undefined && defender.card.name === 'harden')) {
               factor = 2 // critical hit
             } else if (attacker.card.atk / defender.card.dfs <= 0.5) {
               factor = 0.5 // anti-critical
@@ -156,11 +156,7 @@ io.on('connection', socket => {
           let dmg = Math.floor(attacker.card.getBaseDamage() * factor)
 
           if (defender.card !== undefined && ['close', 'remote'].includes(attacker.card.getType())) {
-            if (defender.card.name === 'catch' && attacker.card.getType() === 'close') {
-              dmg = 0
-              attacker.sufferDamage(70)
-              continue
-            } else if (defender.card.name === 'harden') {
+            if (defender.card.name === 'harden' && attacker.card.name !== 'break') {
               if (defender.card.dfs < attacker.card.atk) {
                 dmg /= 2
               } else if (defender.card.dfs >= attacker.card.atk) {

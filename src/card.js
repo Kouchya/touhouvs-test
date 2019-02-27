@@ -27,10 +27,6 @@ const CardInfo = {
     dmg: 0,
     type: 'lvlup'
   },
-  catch: {
-    dmg: 0,
-    type: 'defend'
-  },
   harden: {
     dmg: 0,
     type: 'defend'
@@ -42,10 +38,6 @@ const CardInfo = {
   lure: {
     dmg: 0,
     type: 'defend'
-  },
-  dream: {
-    dmg: 0,
-    type: 'remote'
   }
 }
 
@@ -68,6 +60,17 @@ class Card {
 
   doEffect(owner, oppo) {
     // do card effects
+    if (this.name === 'break') {
+      if (oppo.card !== undefined && oppo.card.name === 'harden') {
+        oppo.setCond('blocked', {round: 1, num: 2})
+      }
+    } else if (this.name === 'lvlup') {
+      owner.levelUp(1)
+    } else if (this.name === 'tackle') {
+      if (oppo.card !== undefined && oppo.card.name === 'harden') {
+        oppo.levelDown(1)
+      }
+    }
   }
 }
 
