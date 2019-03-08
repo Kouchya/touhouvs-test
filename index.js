@@ -4,9 +4,30 @@ const io = require('socket.io')(http)
 
 const chars = require('./src/char.js')
 const card = require('./src/card.js')
+let results = require('./src/result.js')
 
 http.listen(9001)
 console.log('Listening on port 9001...')
+
+function emitSep(clients, socket, msg, selfdata, oppodata) {
+  for (let clientid of clients) {
+    if (clientid === socket.id) {
+      socket.emit(msg, selfdata, oppodata)
+    } else {
+      io.to(clientid).emit(msg, oppodata, selfdata)
+    }
+  }
+}
+
+function emitAll(clients, msg, ...data) {
+  if (Array.isArray(clients)) {
+    for (let clientid of clients) {
+      io.to(clientid).emit(msg, ...data)
+    }
+  } else if (typeof clients === 'string') {
+    io.to(clients).emit(msg, ...data)
+  }
+}
 
 let players = {}
 
@@ -59,19 +80,20 @@ io.on('connection', socket => {
         plyr.handcards.push(new card.Card())
         oppo.handcards.push(new card.Card())
       }
-      attrs = ['name', 'hp', 'basehp', 'sc', 'handcards', 'uselimit']
+      attrs = ['name', 'hp', 'basehp', 'sc', 'handcards', 'uselimit', 'hasused']
       let p1 = {}, p2 = {}
       for (let attr of attrs) {
         p1[attr] = plyr[attr]
         p2[attr] = oppo[attr]
       }
-      for (let clientid of clients) {
+      /*for (let clientid of clients) {
         if (clientid === socket.id) {
           socket.emit('char selected', p1, p2)
         } else {
           io.to(clientid).emit('char selected', p2, p1)
         }
-      }
+      }*/
+      emitSep(clients, socket, 'char selected', p1, p2)
     }
   })
 
@@ -96,15 +118,18 @@ io.on('connection', socket => {
       }
     }
     if (oppo !== undefined && oppo.use.length > 0) {
-      let result = {} // any msg to be sent to cli will first be stored here
+      results = []
       for (let i = 0; plyr.use[i] !== undefined || oppo.use[i] !== undefined; i++) {
         let plyrcard, oppocard
         if (plyr.use[i] !== undefined) {
           plyrcard = plyr.card = plyr.handcards[plyr.use[i]]
+          plyr.hasused.push(plyrcard.name)
         }
         if (oppo.use[i] !== undefined) {
           oppocard = oppo.card = oppo.handcards[oppo.use[i]]
+          oppo.hasused.push(oppocard.name)
         }
+        emitAll(room, 'highlight card', plyrcard !== undefined ? plyrcard.name : undefined, oppocard !== undefined ? oppocard.name : undefined)
 
         let attacker, defender
         let mode = 'normal' // if not normal, then nobody moves
@@ -140,14 +165,33 @@ io.on('connection', socket => {
 
         if (mode === 'tied') {
           // nobody moves
+          results.push({
+            'content': 'tied',
+            'args': {}
+          })
         } else if (mode === 'normal') {
           // Fight!
+          results.push({
+            'content': 'use hint',
+            'args': {
+              'player': attacker.name,
+              'card': attacker.card.name
+            }
+          })
           let factor = 1
           if (defender.card !== undefined) {
             if (attacker.card.atk / defender.card.dfs >= 2 || (attacker.card.name === 'break' && defender.card !== undefined && defender.card.name === 'harden')) {
               factor = 2 // critical hit
+              results.push({
+                'content': 'critical',
+                'args': {}
+              })
             } else if (attacker.card.atk / defender.card.dfs <= 0.5) {
               factor = 0.5 // anti-critical
+              results.push({
+                'content': 'anti-critical',
+                'args': {}
+              })
             } else {
               factor += (attacker.card.atk - defender.card.dfs) / 10
             }
@@ -159,11 +203,29 @@ io.on('connection', socket => {
             if (defender.card.name === 'harden' && attacker.card.name !== 'break') {
               if (defender.card.dfs < attacker.card.atk) {
                 dmg /= 2
+                results.push({
+                  'content': 'weak harden',
+                  'args': {
+                    'player': defender.name
+                  }
+                })
               } else if (defender.card.dfs >= attacker.card.atk) {
                 dmg = 0
+                results.push({
+                  'content': 'strong harden',
+                  'args': {
+                    'player': defender.name
+                  }
+                })
               }
-            } else if (defender.card.name === 'lure' && attacker.card.getType() === 'remote') {
+            } else if (defender.card.name === 'lure' && attacker.card.getType() === 'close') {
               dmg = 0
+              results.push({
+                'content': 'lure',
+                'args': {
+                  'player': defender.name
+                }
+              })
               attacker.sufferDamage(attacker.card.getBaseDamage())
               attacker.card.doEffect(defender, attacker)
               continue
@@ -176,9 +238,17 @@ io.on('connection', socket => {
 
           attacker.card.doEffect(attacker, defender)
           if (defender.card !== undefined && defender.card.name === 'lvlup') {
+            results.push({
+              'content': 'use hint',
+              'args': {
+                'player': defender.name,
+                'card': 'lvlup'
+              }
+            })
             defender.card.doEffect(defender, attacker)
           }
         }
+        emitAll(room, 'results', results)
       }
     }
   })

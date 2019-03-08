@@ -1,3 +1,5 @@
+let results = require('./result.js')
+
 class Char {
   constructor(name, basehp, sc) {
     this.name = name
@@ -6,6 +8,7 @@ class Char {
     this.handcards = []
     this.uselimit = 3
     this.use = []
+    this.hasused = [] // Array of card names
     this.card = undefined
     this.conds = {}
     this.lvl = {num: 1, round: -1}
@@ -13,9 +16,23 @@ class Char {
 
   sufferDamage(dmg) {
     this.hp -= dmg
+    results.push({
+      'content': 'damage',
+      'args': {
+        'player': this.name,
+        'num': dmg
+      }
+    })
     if (this.hp < 0) {
       this.hp = 0
     }
+    results.push({
+      'content': 'damage result',
+      'args': {
+        'player': this.name,
+        'num': this.hp
+      }
+    })
   }
 
   setCond(cond, args) {

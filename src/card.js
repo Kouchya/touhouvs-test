@@ -1,3 +1,5 @@
+let results = require('./result.js')
+
 const CardInfo = {
   punch: {
     dmg: 50,
