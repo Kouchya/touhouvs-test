@@ -122,6 +122,7 @@ io.on('connection', socket => {
 
   // user has chosen its action
   socket.on('use', acts => {
+    socket.emit('op prohibit')
     plyr = players[socket.id]
     plyr.use = acts
     let rooms = Object.keys(socket.rooms)
@@ -145,6 +146,11 @@ io.on('connection', socket => {
       plyr.use = []
       oppo.use = []
     }
+  })
+
+  // start next round
+  socket.on('roundend', () => {
+    socket.emit('battle')
   })
 })
 
