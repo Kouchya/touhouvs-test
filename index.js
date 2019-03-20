@@ -53,7 +53,7 @@ io.on('connection', socket => {
 
   // user has selected a char
   socket.on('select char', char => {
-    players[socket.id] = { 'name': char, 'use': [] }
+    players[socket.id] = { 'name': char, 'use': [], 'ready': false }
     let rooms = Object.keys(socket.rooms)
     let room
     for (let r of rooms) {
@@ -72,12 +72,51 @@ io.on('connection', socket => {
     }
     if (oppo !== undefined) {
       emitSep(clients, socket, 'char selected', char, oppo.name)
-      /* attrs = ['name', 'hp', 'basehp', 'sc', 'handcards', 'uselimit', 'hasused']
-      let p1 = {}, p2 = {}
-      for (let attr of attrs) {
-        p1[attr] = plyr[attr]
-        p2[attr] = oppo[attr]
-      } */
+    }
+  })
+
+  // user transfer handcards info to opponent
+  socket.on('handcards', handcards => {
+    plyr = players[socket.id]
+    let rooms = Object.keys(socket.rooms)
+    let room
+    for (let r of rooms) {
+      if (r !== socket.id) {
+        room = r
+        break
+      }
+    }
+    let clients = Object.keys(io.sockets.adapter.rooms[room].sockets)
+    for (let clientid of clients) {
+      if (clientid !== socket.id) {
+        io.to(clientid).emit('oppo handcards', handcards)
+        break
+      }
+    }
+  })
+
+  // user received opponent's handcards
+  socket.on('oppo recv', () => {
+    plyr = players[socket.id]
+    plyr.ready = true
+    let rooms = Object.keys(socket.rooms)
+    let room
+    for (let r of rooms) {
+      if (r !== socket.id) {
+        room = r
+        break
+      }
+    }
+    let clients = Object.keys(io.sockets.adapter.rooms[room].sockets)
+    let oppo = undefined
+    for (let clientid of clients) {
+      if (clientid !== socket.id) {
+        oppo = players[clientid]
+        break
+      }
+    }
+    if (oppo !== undefined && oppo.ready) {
+      emitAll(clients, 'battle')
     }
   })
 
