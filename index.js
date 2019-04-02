@@ -60,13 +60,6 @@ io.on('connection', socket => {
   socket.on('select char', char => {
     players[socket.id] = new chars[char]()
     let plyr = players[socket.id]
-    plyr.handcards.push(new card.Card('spirit'))
-    plyr.handcards.push(new card.Card('spirit'))
-    plyr.handcards.push(new card.Card('throw'))
-    plyr.handcards.push(new card.Card('tackle'))
-    plyr.handcards.push(new card.Card('break'))
-    plyr.handcards.push(new card.Card('anger'))
-    plyr.handcards.push(new card.Card('lvlup'))
     while (plyr.handcards.length < plyr.getMaxCards()) {
       plyr.handcards.push(new card.Card())
     }
