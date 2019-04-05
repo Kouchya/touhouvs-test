@@ -266,11 +266,11 @@ class Char {
   }
 
   addMaxCards(num, round, results) {
-    owner.setCond('handcard-up', { round, num }, results, ['num'])
+    this.setCond('handcard-up', { round, num }, results, ['num'])
   }
 
   reduceMaxCards(num, round, results) {
-    oppo.setCond('handcard-limit', { round, num }, results, ['num'])
+    this.setCond('handcard-limit', { round, num }, results, ['num'])
   }
 
   getUseLimit() {

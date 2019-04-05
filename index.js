@@ -60,6 +60,10 @@ io.on('connection', socket => {
   socket.on('select char', char => {
     players[socket.id] = new chars[char]()
     let plyr = players[socket.id]
+    plyr.handcards.push(new card.Card('lvlup'))
+    plyr.handcards.push(new card.Card('lvlup'))
+    plyr.handcards.push(new card.Card('tackle'))
+    plyr.handcards.push(new card.Card('break'))
     while (plyr.handcards.length < plyr.getMaxCards()) {
       plyr.handcards.push(new card.Card())
     }

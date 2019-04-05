@@ -31,11 +31,25 @@ class Card {
     this.atk = num
   }
 
+  addAtk(num) {
+    this.atk += num
+    if (this.atk > 10) {
+      this.atk = 10
+    }
+  }
+
+  loseAtk(num) {
+    this.atk -= num
+    if (this.atk < 1) {
+      this.atk = 1
+    }
+  }
+
   doEffect(owner, oppo, crit, results) {
     // do card effects
     if (this.isSpell) {
       if (this.info.effect !== undefined) {
-        return this.info.effect(owner, oppo, crit, results)
+        return this.info.effect(this, owner, oppo, crit, results)
       }
     }
     if (this.name === 'break') {
@@ -59,15 +73,15 @@ class Card {
 const CommonSpells = [
   {
     name: ['Kaisei'],
-    group: /^bcs/
+    group: /^ssb/
   },
   {
     name: ['Kaminagi'],
-    group: /^sal/
+    group: /^slh/
   },
   {
     name: ['Typhoon'],
-    group: /^acc/
+    group: /^acb/
   },
   {
     name: ['Fate'],

@@ -63,21 +63,21 @@ const CardNames = Object.keys(CardInfo)
 const SpellInfo = {
   'Musou Myoutama': {
     dmg: 320,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       oppo.setCond('#wait-for-seal', { round: 1, num: 1 }, results)
       return ['wait-for-seal']
     }
   },
   'Musou Fuuin': {
     dmg: 480,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       oppo.setCond('#wait-for-seal', { round: 1, num: 2 }, results)
       return ['wait-for-seal']
     }
   },
   'Musou Tensei': {
     dmg: 0,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       let eff = []
       if (!oppo.hasCond('hurt@musou-tensei')) {
         oppo.setCond('hurt@musou-tensei', { round: -1, num: 220 }, results)
@@ -92,14 +92,14 @@ const SpellInfo = {
   },
   'Circle Seal': {
     dmg: 240,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       oppo.setUnavail(util.randchoice(CardNames), 3, results)
       return ['unavail']
     }
   },
   'Double Enchant': {
     dmg: 360,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       let cards = util.randchoices(CardNames, 2)
       for (let card of cards) {
         oppo.setUnavail(card, 3, results)
@@ -109,7 +109,7 @@ const SpellInfo = {
   },
   'Hakurei Bullet Enchant': {
     dmg: 480,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       let cards = util.randchoices(CardNames, 3)
       for (let card of cards) {
         oppo.setUnavail(card, 3, results)
@@ -120,7 +120,7 @@ const SpellInfo = {
   },
   'Subspace Cavity': {
     dmg: 280,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       let card_ids = oppo.handcards.map((_, index) => index).filter(index => {
         return !oppo.use.includes(index)
       })
@@ -145,7 +145,7 @@ const SpellInfo = {
   },
   'Subspace Cavity Teleport': {
     dmg: 420,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       let card_ids = oppo.handcards.map((_, index) => index).filter(index => {
         return !oppo.use.includes(index)
       })
@@ -172,7 +172,7 @@ const SpellInfo = {
   },
   'Dream Subspace Cavity': {
     dmg: 560,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       let card_ids = oppo.handcards.map((_, index) => index).filter(index => {
         return !oppo.use.includes(index)
       })
@@ -200,7 +200,7 @@ const SpellInfo = {
   },
   'Persuasion Needle': {
     dmg: 220,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       let possib = util.randint()
       if (crit) {
         possib = Math.floor(possib / 2)
@@ -214,7 +214,7 @@ const SpellInfo = {
   },
   'Kishin Persuasion Needle': {
     dmg: 330,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       let possib = util.randint()
       if (crit) {
         possib = Math.floor(possib / 2)
@@ -228,7 +228,7 @@ const SpellInfo = {
   },
   'Onmyou Persuasion Needle': {
     dmg: 440,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       let possib = util.randint()
       if (crit) {
         possib = Math.floor(possib / 2)
@@ -241,52 +241,165 @@ const SpellInfo = {
     }
   },
   'Stardust': {
-    dmg: 340
+    dmg: 340,
+    effect (card, owner, oppo, crit, results) {
+      let num = 0
+      const cards = card.subcards
+      if (cards.length > 0) {
+        for (const c of cards) {
+          num += c.atk
+        }
+        num = Math.floor(num / cards.length)
+      }
+      if (num > 0) {
+        let card_ids = owner.handcards.map((_, index) => index).filter(index => {
+          return !owner.use.includes(index)
+        })
+        if (card_ids.length > 0) {
+          for (let index of card_ids) {
+            owner.handcards[index].addAtk(num)
+          }
+          if (results) {
+            results.push({
+              content: 'rest-cards-add-atk',
+              args: {
+                player: owner.name,
+                num
+              }
+            })
+          }
+          return ['add-atk']
+        }
+      }
+      return []
+    }
   },
   'Stardust Fantasy': {
-    dmg: 480
+    dmg: 480,
+    effect (card, owner, oppo, crit, results) {
+      let num = 0
+      const cards = card.subcards
+      if (cards.length > 0) {
+        for (const c of cards) {
+          num += c.atk
+        }
+        num = Math.floor(num / cards.length)
+      }
+      if (num > 0) {
+        let card_ids = oppo.handcards.map((_, index) => index).filter(index => {
+          return !oppo.use.includes(index)
+        })
+        if (card_ids.length > 0) {
+          for (let index of card_ids) {
+            oppo.handcards[index].loseAtk(num)
+          }
+          if (results) {
+            results.push({
+              content: 'rest-cards-lose-atk',
+              args: {
+                player: oppo.name,
+                num
+              }
+            })
+          }
+          return ['lose-atk']
+        }
+      }
+      return []
+    }
   },
   'Milky Way': {
-    dmg: 560
+    dmg: 560,
+    effect (card, owner, oppo, crit, results) {
+      let eff = []
+      let num = 0
+      const cards = card.subcards
+      if (cards.length > 0) {
+        for (const c of cards) {
+          num += c.atk
+        }
+        num = Math.floor(num / cards.length)
+      }
+      if (num > 0) {
+        let card_ids = owner.handcards.map((_, index) => index).filter(index => {
+          return !owner.use.includes(index)
+        })
+        if (card_ids.length > 0) {
+          for (let index of card_ids) {
+            owner.handcards[index].addAtk(num)
+          }
+          if (results) {
+            results.push({
+              content: 'rest-cards-add-atk',
+              args: {
+                player: owner.name,
+                num
+              }
+            })
+          }
+          eff.push('add-atk')
+        }
+
+        let oppo_card_ids = oppo.handcards.map((_, index) => index).filter(index => {
+          return !oppo.use.includes(index)
+        })
+        if (oppo_card_ids.length > 0) {
+          for (let index of oppo_card_ids) {
+            oppo.handcards[index].loseAtk(num)
+          }
+          if (results) {
+            results.push({
+              content: 'rest-cards-lose-atk',
+              args: {
+                player: oppo.name,
+                num
+              }
+            })
+          }
+          eff.push('lose-atk')
+        }
+      }
+      return eff
+    }
   },
   'Witch Dash': {
     dmg: 280,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       owner.addMaxCards(1, 2, results, 'witch-dash')
       return ['handcard-up']
     }
   },
   'Witch Fantasy': {
     dmg: 420,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       owner.addMaxCards(2, 2, results, 'witch-dash')
       return ['handcard-up']
     }
   },
   'Meteorite': {
     dmg: 560,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       owner.addMaxCards(2, 2, results, 'witch-dash')
       return ['handcard-up']
     }
   },
   'Witch Bullet': {
     dmg: 240,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       owner.levelUp(1, results)
       return ['lvlup']
     }
   },
   'Witch Shoot': {
     dmg: 360,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       owner.levelUp(1, results)
       return ['lvlup']
     }
   },
   'Witch Starlight': {
     dmg: 480,
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       owner.setCond('damage-fix', { round: 3, factor: 2 }, results)
       return ['double-damage']
     }
@@ -294,7 +407,7 @@ const SpellInfo = {
   'Kaisei': {
     dmg: 0,
     type: 'buff',
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       owner.addUseLimit(2, 4, results, 'kaisei')
       return ['handcard-up']
     }
@@ -302,7 +415,7 @@ const SpellInfo = {
   'Kaminagi': {
     dmg: 0,
     type: 'buff',
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       owner.recover(Math.floor(owner.basehp * 0.3), results)
       return ['recover']
     }
@@ -310,7 +423,7 @@ const SpellInfo = {
   'Typhoon': {
     dmg: 0,
     type: 'buff',
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       let card_ids = owner.handcards.map((_, index) => index).filter(index => {
         return !owner.use.includes(index)
       })
@@ -337,7 +450,7 @@ const SpellInfo = {
   'Fate': {
     dmg: 0,
     type: 'buff',
-    effect (owner, oppo, crit, results) {
+    effect (card, owner, oppo, crit, results) {
       owner.setCond('#change-all-handcards', { round: -1 }, results)
     }
   }
